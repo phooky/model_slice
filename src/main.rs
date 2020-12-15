@@ -1,5 +1,7 @@
 extern crate clap;
+extern crate nom_stl;
 use clap::{Arg, App};
+use nom_stl::parse_stl;
 use std::fs::File;
 
 enum RelPos {
@@ -27,11 +29,8 @@ fn main() {
     let mut f = File::open(path).unwrap();
 
     println!("Loading model {}",path);
-    let stl = stl_io::create_stl_reader(&mut f).unwrap();
-    let mut tcount = 0;
-    for tri in stl {
-        tcount = tcount + 1;
-    }
-    println!("Triangle count {}",tcount);
+    let mut stl = parse_stl(&mut f).unwrap();
+    println!("Loaded");
+    println!("Triangle count {}",stl.triangles().len());
     println!("Slicing model at z-height {}",z);
 }
