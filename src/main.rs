@@ -2,12 +2,16 @@ extern crate clap;
 extern crate stl_io;
 use clap::{Arg, App};
 use std::fs::File;
-use stl_io::Triangle;
+use stl_io::{Vertex,Triangle};
 
 enum RelPos {
     ABOVE,
     BELOW,
     ON,
+}
+
+struct Segment {
+    vertices : [Vertex; 2],
 }
 
 fn reorder(tri : &Triangle) -> (Triangle, bool) {
@@ -70,23 +74,41 @@ fn main() {
 
     println!("Loading model {}",path);
     let stl = stl_io::create_stl_reader(&mut f).unwrap();
-    let mut above = 0;
-    let mut below = 0;
-    let mut on = 0;
+    let mut above = Vec::<Triangle>::new();
+    let mut below = Vec::<Triangle>::new();
+    let mut on = Vec::<Segment>::new();
     for tri_res in stl {
         match tri_res {
             Ok(tri) => match check(&tri, z) {
-                RelPos::ABOVE => { above = above + 1; }
-                RelPos::BELOW => { below = below + 1; }
+                RelPos::ABOVE => { above.push(tri.clone()); } // case A
+                RelPos::BELOW => { below.push(tri.clone()); } // case I
                 RelPos::ON => {
                     let (tri, sense) = reorder(&tri);
-                    println!("Z: {} {} {} {:?}", tri.vertices[0][2], tri.vertices[1][2], 
-                             tri.vertices[2][2], sense);
+                    if tri.vertices[2][2] == z {
+                        if tri.vertices[1][2] == z { // case C
+                            above.push(tri.clone());
+                            on.push(Segment { vertices : [tri.vertices[1],tri.vertices[2]] });
+                        } else { // case B
+                            above.push(tri.clone());
+                        }
+                    } else if tri.vertices[1][2] < z { // case D
+                    } else if tri.vertices[1][2] == z { // case E
+                    } else if tri.vertices[0][2] < z { // case F
+                    } else if tri.vertices[0][2] == z {
+                        if tri.vertices[1][2] == z { // case G
+                            below.push(tri.clone());
+                            on.push(Segment { vertices : [tri.vertices[0],tri.vertices[1]] });
+                        } else { // case H
+                            below.push(tri.clone());
+                        }
+                    }
+                    //println!("Z: {} {} {} {:?}", tri.vertices[0][2], tri.vertices[1][2], 
+                    //         tri.vertices[2][2], sense);
                 }
             },
             _ => {}
         }
     }
-    println!("Triangle count {} above, {} below, {} on",above,below,on);
+    println!("Triangle count {} above, {} below, {} segments",above.len(),below.len(), on.len());
     println!("Slicing model at z-height {}",z);
 }
