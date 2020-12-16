@@ -8,6 +8,5 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.3"
-#stl_io = "0.5.2"
-nom_stl = "0.2.0"
+stl_io = "0.5.2"
 
