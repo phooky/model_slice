@@ -62,6 +62,14 @@ fn main() {
              .help("Cut the model at the given z-height")
              .default_value("0")
              .takes_value(true))
+        .arg(Arg::with_name("top")
+             .short("t")
+             .help("Output path for STL above slicing plane")
+             .takes_value(true))
+        .arg(Arg::with_name("bottom")
+             .short("b")
+             .help("Output path for STL below slicing plane")
+             .takes_value(true))
         .arg(Arg::with_name("FILE")
              .required(true)
              .index(1));
@@ -108,6 +116,20 @@ fn main() {
             },
             _ => {}
         }
+    }
+    match matches.value_of("bottom") {
+        Some(path) => {
+            let mut f = File::create(path).unwrap();
+            stl_io::write_stl(&mut f,below.iter());
+        },
+        None => {},
+    }
+    match matches.value_of("top") {
+        Some(path) => {
+            let mut f = File::create(path).unwrap();
+            stl_io::write_stl(&mut f,above.iter());
+        },
+        None => {},
     }
     println!("Triangle count {} above, {} below, {} segments",above.len(),below.len(), on.len());
     println!("Slicing model at z-height {}",z);
