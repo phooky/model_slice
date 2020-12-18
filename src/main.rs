@@ -15,12 +15,9 @@ struct Segment {
 }
 
 fn reorder(tri : &Triangle) -> (Triangle, bool) {
-    // Reorder vertices in the triangle and add a bit of
-    // information to indicate if the sense of the triangle
-    // has changed.
-    // if z1 < z0 swap 0 1
-    // if z2 < z0 swap 0 2
-    // if z1 < z2 swap 1 2
+    // Sort vertices in order of ascending z-height.
+    // The 'sense' boolean is true if the cycle of the
+    // vertices has been reversed.
     let mut rv = tri.clone();
     let mut sense = false;
     let mut cond_swap = |a : usize, b : usize| {
@@ -35,6 +32,80 @@ fn reorder(tri : &Triangle) -> (Triangle, bool) {
     cond_swap(0,2);
     cond_swap(1,2);
     (rv, sense)
+}
+
+fn correct_sense(tri : &mut Triangle, sense : bool) {
+    // Correct the sense of the triangle
+    if sense {
+        let tmp = tri.vertices[1];
+        tri.vertices[2] = tri.vertices[1];
+        tri.vertices[1] = tmp;
+    }
+}
+
+struct SplitModel {
+    zplus : Vec<Triangle>,
+    zminus : Vec<Triangle>,
+    edge : Vec<Segment>,
+}
+
+impl SplitModel {
+    fn new() -> SplitModel {
+        SplitModel{ zplus : Vec::new(), zminus : Vec::new(), edge : Vec::new() }
+    }
+
+    fn add_tri(&mut self, mut t2 : Triangle, sense : bool, zplus : bool) {
+        correct_sense(&mut t2, sense);
+        if zplus { 
+            self.zplus.push(t2); 
+        } else {
+            self.zminus.push(t2);
+        }
+    }
+
+    fn split_tri(&mut self, tri : &Triangle, z : f32) {
+        let original = tri;
+        let (tri, sense) = reorder(&original);
+        let [v0, v1, v2] = tri.vertices;
+        if v2[2] <= z { // case A/B/C
+            self.zminus.push(original.clone());
+            if v1[2] == z { // case C
+                self.edge.push(Segment { vertices : [v1,v2] });
+            }
+        } else if v1[2] < z { // case D 
+            let x = intersect_plane(&v1,&v2,z);
+            let y = intersect_plane(&v0,&v2,z);
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [v0,v1,x] }, sense, false );
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [v0,x,y] }, sense, false );
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [x,v2,y] }, sense, true );
+            self.edge.push(Segment { vertices : [x,y] });
+        } else if v1[2] == z { // case E 
+            let x = intersect_plane(&v0,&v2,z);
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [v0,v1,x] }, sense, false );
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [v1,v2,x] }, sense, true );
+            self.edge.push(Segment { vertices : [x,v1] });
+        } else if v0[2] < z { // case F 
+            let x = intersect_plane(&v0,&v1,z);
+            let y = intersect_plane(&v0,&v2,z);
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [v0,x,y] }, sense, false );
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [y,x,v2] }, sense, true );
+            self.add_tri( Triangle { normal : tri.normal,
+                vertices : [x,v1,v2] }, sense, true );
+            self.edge.push(Segment { vertices : [x,y] });
+        } else if v0[2] >= z {
+            self.zminus.push(original.clone());
+            if v1[2] == z { // case G
+                self.edge.push(Segment { vertices : [v0,v1] });
+            }
+        }
+    }
 }
 
 fn check(tri : &Triangle, z : f32) -> RelPos {
