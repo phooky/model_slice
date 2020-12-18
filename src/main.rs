@@ -37,7 +37,7 @@ fn reorder(tri : &Triangle) -> (Triangle, bool) {
 fn correct_sense(tri : &mut Triangle, sense : bool) {
     // Correct the sense of the triangle
     if sense {
-        let tmp = tri.vertices[1];
+        let tmp = tri.vertices[2];
         tri.vertices[2] = tri.vertices[1];
         tri.vertices[1] = tmp;
     }
@@ -100,11 +100,11 @@ impl SplitModel {
                 vertices : [x,v1,v2] }, sense, true );
             self.edge.push(Segment { vertices : [x,y] });
         } else if v0[2] >= z {
-            self.zminus.push(original.clone());
+            self.zplus.push(original.clone());
             if v1[2] == z { // case G
                 self.edge.push(Segment { vertices : [v0,v1] });
             }
-        }
+        } else { println!("CASE X"); }
     }
 }
 
@@ -157,82 +157,30 @@ fn main() {
         .parse().unwrap();
     let path = matches.value_of("FILE").unwrap();
     let mut f = File::open(path).unwrap();
+    let mut sm = SplitModel::new();
 
     println!("Loading model {}",path);
     let stl = stl_io::create_stl_reader(&mut f).unwrap();
-    let mut above = Vec::<Triangle>::new();
-    let mut below = Vec::<Triangle>::new();
-    let mut on = Vec::<Segment>::new();
     for tri_res in stl {
         match tri_res {
-            Ok(tri) => match check(&tri, z) {
-                RelPos::ABOVE => { above.push(tri.clone()); } // case A
-                RelPos::BELOW => { below.push(tri.clone()); } // case I
-                RelPos::ON => {
-                    let (tri, sense) = reorder(&tri);
-                    if tri.vertices[2][2] == z {
-                        if tri.vertices[1][2] == z { // case C
-                            above.push(tri.clone());
-                            on.push(Segment { vertices : [tri.vertices[1],tri.vertices[2]] });
-                        } else { // case B
-                            above.push(tri.clone());
-                        }
-                    } else if tri.vertices[1][2] < z { // case D 
-                        let x = intersect_plane(&tri.vertices[1],&tri.vertices[2],z);
-                        let y = intersect_plane(&tri.vertices[0],&tri.vertices[2],z);
-                        below.push( Triangle { normal : tri.normal,
-                            vertices : [tri.vertices[0],tri.vertices[1],x] } );
-                        below.push( Triangle { normal : tri.normal,
-                            vertices : [tri.vertices[0],x,y] } );
-                        above.push( Triangle { normal : tri.normal,
-                            vertices : [x,y,tri.vertices[2]] } );
-                        on.push(Segment { vertices : [x,y] });
-                    } else if tri.vertices[1][2] == z { // case E 
-                        let x = intersect_plane(&tri.vertices[0],&tri.vertices[2],z);
-                        below.push( Triangle { normal : tri.normal,
-                            vertices : [tri.vertices[0],x,tri.vertices[1]] } );
-                        above.push( Triangle { normal : tri.normal,
-                            vertices : [tri.vertices[1],x,tri.vertices[2]] } );
-                        on.push(Segment { vertices : [x,tri.vertices[1]] });
-                    } else if tri.vertices[0][2] < z { // case F 
-                        let x = intersect_plane(&tri.vertices[0],&tri.vertices[1],z);
-                        let y = intersect_plane(&tri.vertices[0],&tri.vertices[2],z);
-                        above.push( Triangle { normal : tri.normal,
-                            vertices : [tri.vertices[2],tri.vertices[1],x] } );
-                        above.push( Triangle { normal : tri.normal,
-                            vertices : [tri.vertices[2],x,y] } );
-                        below.push( Triangle { normal : tri.normal,
-                            vertices : [y,x,tri.vertices[0]] } );
-                        on.push(Segment { vertices : [x,y] });
-                    } else if tri.vertices[0][2] == z {
-                        if tri.vertices[1][2] == z { // case G
-                            below.push(tri.clone());
-                            on.push(Segment { vertices : [tri.vertices[0],tri.vertices[1]] });
-                        } else { // case H
-                            below.push(tri.clone());
-                        }
-                    }
-                    //println!("Z: {} {} {} {:?}", tri.vertices[0][2], tri.vertices[1][2], 
-                    //         tri.vertices[2][2], sense);
-                }
-            },
-            _ => {}
+            Ok(tri) => sm.split_tri(&tri, z),
+            _ => {},
         }
     }
     match matches.value_of("bottom") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
-            stl_io::write_stl(&mut f,below.iter());
+            stl_io::write_stl(&mut f,sm.zminus.iter());
         },
         None => {},
     }
     match matches.value_of("top") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
-            stl_io::write_stl(&mut f,above.iter());
+            stl_io::write_stl(&mut f,sm.zplus.iter());
         },
         None => {},
     }
-    println!("Triangle count {} above, {} below, {} segments",above.len(),below.len(), on.len());
+    println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
     println!("Slicing model at z-height {}",z);
 }
