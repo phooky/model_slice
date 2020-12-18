@@ -54,6 +54,13 @@ fn check(tri : &Triangle, z : f32) -> RelPos {
     }
 }
 
+fn intersect_plane(a : &Vertex, b : &Vertex, z : f32) -> Vertex {
+    let prop = (z - a[2])/(b[2] - a[2]);
+    let x = a[0] + prop*(b[0]-a[0]);
+    let y = a[1] + prop*(b[1]-a[1]);
+    Vertex::new([x,y,z])
+}
+
 fn main() {
     let clap = App::new("Simple solid model slicer")
         .about("Cuts a model along a plane orthogonal to the z-axis")
@@ -99,9 +106,33 @@ fn main() {
                         } else { // case B
                             above.push(tri.clone());
                         }
-                    } else if tri.vertices[1][2] < z { // case D
-                    } else if tri.vertices[1][2] == z { // case E
-                    } else if tri.vertices[0][2] < z { // case F
+                    } else if tri.vertices[1][2] < z { // case D 
+                        let x = intersect_plane(&tri.vertices[1],&tri.vertices[2],z);
+                        let y = intersect_plane(&tri.vertices[0],&tri.vertices[2],z);
+                        below.push( Triangle { normal : tri.normal,
+                            vertices : [tri.vertices[0],tri.vertices[1],x] } );
+                        below.push( Triangle { normal : tri.normal,
+                            vertices : [tri.vertices[0],x,y] } );
+                        above.push( Triangle { normal : tri.normal,
+                            vertices : [x,y,tri.vertices[2]] } );
+                        on.push(Segment { vertices : [x,y] });
+                    } else if tri.vertices[1][2] == z { // case E 
+                        let x = intersect_plane(&tri.vertices[0],&tri.vertices[2],z);
+                        below.push( Triangle { normal : tri.normal,
+                            vertices : [tri.vertices[0],x,tri.vertices[1]] } );
+                        above.push( Triangle { normal : tri.normal,
+                            vertices : [tri.vertices[1],x,tri.vertices[2]] } );
+                        on.push(Segment { vertices : [x,tri.vertices[1]] });
+                    } else if tri.vertices[0][2] < z { // case F 
+                        let x = intersect_plane(&tri.vertices[0],&tri.vertices[1],z);
+                        let y = intersect_plane(&tri.vertices[0],&tri.vertices[2],z);
+                        above.push( Triangle { normal : tri.normal,
+                            vertices : [tri.vertices[2],tri.vertices[1],x] } );
+                        above.push( Triangle { normal : tri.normal,
+                            vertices : [tri.vertices[2],x,y] } );
+                        below.push( Triangle { normal : tri.normal,
+                            vertices : [y,x,tri.vertices[0]] } );
+                        on.push(Segment { vertices : [x,y] });
                     } else if tri.vertices[0][2] == z {
                         if tri.vertices[1][2] == z { // case G
                             below.push(tri.clone());
