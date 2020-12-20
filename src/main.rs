@@ -4,12 +4,6 @@ use clap::{Arg, App};
 use std::fs::File;
 use stl_io::{Vertex,Triangle};
 
-enum RelPos {
-    ABOVE,
-    BELOW,
-    ON,
-}
-
 struct Segment {
     vertices : [Vertex; 2],
 }
@@ -41,6 +35,11 @@ fn correct_sense(tri : &mut Triangle, sense : bool) {
         tri.vertices[2] = tri.vertices[1];
         tri.vertices[1] = tmp;
     }
+}
+
+fn build_loops(segments : &Vec<Segment>) -> Vec<Vec<Vertex>> {
+    let mut loops = Vec::new();
+    loops
 }
 
 struct SplitModel {
@@ -108,23 +107,6 @@ impl SplitModel {
     }
 }
 
-fn check(tri : &Triangle, z : f32) -> RelPos {
-    let mut above = 0;
-    let mut below = 0;
-    for i in 0..3 {
-        let tz = tri.vertices[i][2];
-        if tz > z { above = above + 1; }
-        if tz < z { below = below + 1; }
-    }
-    if above == 3 {
-        RelPos::ABOVE
-    } else if below == 3 {
-        RelPos::BELOW
-    } else {
-        RelPos::ON
-    }
-}
-
 fn intersect_plane(a : &Vertex, b : &Vertex, z : f32) -> Vertex {
     let prop = (z - a[2])/(b[2] - a[2]);
     let x = a[0] + prop*(b[0]-a[0]);
@@ -170,14 +152,14 @@ fn main() {
     match matches.value_of("bottom") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
-            stl_io::write_stl(&mut f,sm.zminus.iter());
+            stl_io::write_stl(&mut f,sm.zminus.iter()).unwrap();
         },
         None => {},
     }
     match matches.value_of("top") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
-            stl_io::write_stl(&mut f,sm.zplus.iter());
+            stl_io::write_stl(&mut f,sm.zplus.iter()).unwrap();
         },
         None => {},
     }
