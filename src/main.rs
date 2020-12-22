@@ -3,9 +3,23 @@ extern crate stl_io;
 use clap::{Arg, App};
 use std::fs::File;
 use stl_io::{Vertex,Triangle};
+use std::hash::{Hash, Hasher};
 
-struct Segment {
-    vertices : [Vertex; 2],
+struct Vert2 { x : f32, y : f32 }
+
+struct Segment { a : Vert2, b: Vert2 }
+
+impl Hash for Vert2 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.x.to_bits().hash(state);
+        self.y.to_bits().hash(state);
+    }
+}
+
+fn mkseg(v1 : &Vertex, v2 : &Vertex) -> Segment {
+    Segment { 
+        a : Vert2 { x: v1[0], y : v1[1] }, 
+        b : Vert2 { x: v2[0], y : v2[1] }, }
 }
 
 fn reorder(tri : &Triangle) -> (Triangle, bool) {
@@ -39,6 +53,7 @@ fn correct_sense(tri : &mut Triangle, sense : bool) {
 
 fn build_loops(segments : &Vec<Segment>) -> Vec<Vec<Vertex>> {
     let mut loops = Vec::new();
+    let mut segments = segments.clone();
     loops
 }
 
@@ -69,7 +84,7 @@ impl SplitModel {
         if v2[2] <= z { // case A/B/C
             self.zminus.push(original.clone());
             if v1[2] == z { // case C
-                self.edge.push(Segment { vertices : [v1,v2] });
+                self.edge.push(mkseg(&v1,&v2));
             }
         } else if v1[2] < z { // case D 
             let x = intersect_plane(&v1,&v2,z);
@@ -80,14 +95,14 @@ impl SplitModel {
                 vertices : [v0,x,y] }, sense, false );
             self.add_tri( Triangle { normal : tri.normal,
                 vertices : [x,v2,y] }, sense, true );
-            self.edge.push(Segment { vertices : [x,y] });
+            self.edge.push(mkseg(&x,&y));
         } else if v1[2] == z { // case E 
             let x = intersect_plane(&v0,&v2,z);
             self.add_tri( Triangle { normal : tri.normal,
                 vertices : [v0,v1,x] }, sense, false );
             self.add_tri( Triangle { normal : tri.normal,
                 vertices : [v1,v2,x] }, sense, true );
-            self.edge.push(Segment { vertices : [x,v1] });
+            self.edge.push(mkseg(&x,&v1));
         } else if v0[2] < z { // case F 
             let x = intersect_plane(&v0,&v1,z);
             let y = intersect_plane(&v0,&v2,z);
@@ -97,11 +112,11 @@ impl SplitModel {
                 vertices : [y,x,v2] }, sense, true );
             self.add_tri( Triangle { normal : tri.normal,
                 vertices : [x,v1,v2] }, sense, true );
-            self.edge.push(Segment { vertices : [x,y] });
+            self.edge.push(mkseg(&x,&y));
         } else if v0[2] >= z {
             self.zplus.push(original.clone());
             if v1[2] == z { // case G
-                self.edge.push(Segment { vertices : [v0,v1] });
+                self.edge.push(mkseg(&v0,&v1));
             }
         } else { println!("CASE X"); }
     }
