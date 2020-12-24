@@ -26,23 +26,22 @@ impl Segment {
     }
 }
 
-/*
-// We're going to attempt the hash table approach for now.
-pub fn build_loops(segs : &Vec<Segment>) -> Vec<Vec<Vertex2> > {
-    let mut loops = Vec::new();
-    let mut hashtab = HashMap::new();
-    for seg in segs {
-        if !hashtab.contains_key(seg.a) {
-            hashtab.insert(seg.a,Vec::new());
-        }
-        if !hashtab.contains_key(seg.b) {
-            hashtab.insert(seg.b,Vec::new());
-        }
-        hashtab.get_mut(seg.b).unwrap().push(seg.a);
-        hashtab.get_mut(seg.a).unwrap().push(seg.b);
-    }
-    loops
-}*/
 
-// NOPEING OUT on hashing floats. This is a bullshit idea.
+// Strategy:
+// throw every segment in a K-D tree twice. Key is vertex. Value
+// is a list of vertices or chains. (Should everything start as a
+// 1-length chain? It seems clever, but may involve more data 
+// reshuffling than we like.)
+//
+// If we start out trying to build the chains as we insert, we may
+// run into issues with intersecting chains, and a lot of chain
+// merging. Intersecting chains we can deal with by keeping pointers
+// to chains (although position annotations would suck), but then we've
+// got a separate split chain issue, etc. Doing all insertions first and
+// keeping track of X points separately may do the trick.
+//
+// So, the value of an entry would be:
+// enum { Vertex2, (Vertex2, Vertex2), pointer to longer list (Xpt) }
+// First variant is incomplete, second ideal, third complicated.
+//
 
