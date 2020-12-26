@@ -5,7 +5,7 @@ use std::fs::File;
 use stl_io::{Vertex,Triangle};
 
 mod build_face;
-use build_face::Segment;
+use build_face::{Segment,build_loops};
 
 fn reorder(tri : &Triangle) -> (Triangle, bool) {
     // Sort vertices in order of ascending z-height.
@@ -34,12 +34,6 @@ fn correct_sense(tri : &mut Triangle, sense : bool) {
         tri.vertices[2] = tri.vertices[1];
         tri.vertices[1] = tmp;
     }
-}
-
-fn build_loops(segments : &Vec<Segment>) -> Vec<Vec<Vertex>> {
-    let mut loops = Vec::new();
-    let mut segments = segments.clone();
-    loops
 }
 
 struct SplitModel {
@@ -149,6 +143,7 @@ fn main() {
             _ => {},
         }
     }
+    let loops = build_loops(&sm.edge);
     match matches.value_of("bottom") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
