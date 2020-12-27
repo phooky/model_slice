@@ -42,8 +42,16 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
             l.pts.push(*pos);
             let nextpos = segs[idx].other(pos);
             println!("From {:?} to {:?} via {}",pos,nextpos,idx);
-            //tree.locate_all_at_point
-            break;
+            tree.remove(&PointWithIndex::new(idx,nextpos));
+            let mut np = None;
+            for candidate in tree.locate_all_at_point(&nextpos) { 
+                np = match np {
+                    None => Some(candidate),
+                    Some(x) => panic!("X-point!"),
+                }
+            }
+            if np.is_none() { break; }
+            point = *np.unwrap();
         }
         loops.push(l);
         break;
