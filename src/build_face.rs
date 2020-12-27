@@ -18,8 +18,8 @@ impl Segment {
 }
 
 pub struct Loop {
-    pts : Vec<[f32;2]>,
-    closed : bool,
+    pub pts : Vec<[f32;2]>,
+    pub closed : bool,
 }
 
 type PointWithIndex = PointWithData<usize,[f32;2]>;
@@ -41,7 +41,7 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
             let pos = point.position();
             l.pts.push(*pos);
             let nextpos = segs[idx].other(pos);
-            println!("From {:?} to {:?} via {}",pos,nextpos,idx);
+            //println!("From {:?} to {:?} via {}",pos,nextpos,idx);
             tree.remove(&PointWithIndex::new(idx,nextpos));
             let mut np = None;
             for candidate in tree.locate_all_at_point(&nextpos) { 

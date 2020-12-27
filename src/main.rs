@@ -1,5 +1,7 @@
 extern crate clap;
 extern crate stl_io;
+extern crate svg;
+
 use clap::{Arg, App};
 use std::fs::File;
 use stl_io::{Vertex,Triangle};
@@ -124,6 +126,10 @@ fn main() {
              .short("b")
              .help("Output path for STL below slicing plane")
              .takes_value(true))
+        .arg(Arg::with_name("edge")
+             .short("e")
+             .help("Output path for SVG of midplane slice")
+             .takes_value(true))
         .arg(Arg::with_name("FILE")
              .required(true)
              .index(1));
@@ -158,6 +164,29 @@ fn main() {
         },
         None => {},
     }
+    match matches.value_of("edge") {
+        Some(path) => {
+            let mut document = svg::Document::new()
+                .set("viewBox", (0, 0, 600, 600));
+            for l in loops {
+                let mut data = svg::node::element::path::Data::new();
+                data = data.move_to((l.pts[0][0]+150.0,l.pts[0][1]+150.0));
+                for pt in l.pts.iter().skip(1) {
+                    data = data.line_to((pt[0]+150.0,pt[1]+150.0));
+                }
+                let path = svg::node::element::Path::new()
+                    .set("fill", "none")
+                    .set("stroke", "black")
+                    .set("stroke-width", 3)
+                    .set("d", data);
+
+                document = document.add(path);
+            }
+            svg::save(path, &document).unwrap();
+        },
+        None => {},
+    }
+
     println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
     println!("Slicing model at z-height {}",z);
 }
