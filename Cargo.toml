@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.3"
+float-cmp = "0.8.0"
 stl_io = "0.5.2"
 rstar = "0.8.2"
 svg = "0.8.0"

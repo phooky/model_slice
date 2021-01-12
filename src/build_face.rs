@@ -7,6 +7,7 @@ pub struct Segment { a : [f32;2], b: [f32;2] }
 
 impl Segment {
     pub fn new(v1 : &Vertex, v2 : &Vertex) -> Segment {
+        if v1[0] == v2[0] && v1[1] == v2[1] { panic!("empty segment"); }
         Segment { 
             a : [ v1[0], v1[1] ],
             b : [ v2[0], v2[1] ], 
@@ -32,7 +33,7 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
         tree.insert(PointWithIndex::new(idx,seg.b));
     }
     while tree.size() > 0 {
-        println!("--- BUILD LOOP ---");
+        println!("--- BUILDING LOOP ---");
         println!("Seg list {}, tree size {}",segs.len(),tree.size());
         let mut l = Loop { pts: Vec::new(), closed : false };
         let mut point = tree.pop_nearest_neighbor(&[0.0,0.0]).unwrap();
@@ -41,13 +42,17 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
             let pos = point.position();
             l.pts.push(*pos);
             let nextpos = segs[idx].other(pos);
-            //println!("From {:?} to {:?} via {}",pos,nextpos,idx);
+            println!("From {:?} to {:?} via {}",pos,nextpos,idx);
             tree.remove(&PointWithIndex::new(idx,nextpos));
             let mut np = None;
             for candidate in tree.locate_all_at_point(&nextpos) { 
                 np = match np {
                     None => Some(candidate),
-                    Some(x) => panic!("X-point!"),
+                    Some(x) => {
+                        for (idx, seg) in segs.iter().enumerate() {
+                            println!("{} {:?} {:?}",idx,seg.a,seg.b);
+                        }
+                        panic!("X-point!")},
                 }
             }
             if np.is_none() { break; }
@@ -58,6 +63,24 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
     }
     loops
 }
+
+fn angle(point : &[f32;2], prev : &[f32;2], next : &[f32;2]) -> f32 {
+    let next = [next[0]-point[0],next[1]-point[1]];
+    let prev = [prev[0]-point[0],prev[1]-point[1]];
+    next[1].atan2(next[0]) - prev[1].atan2(prev[0])
+}
+
+pub fn loop_sense(l : &Loop) -> bool {
+    let n = l.pts.len();
+    let mut total = angle(&l.pts[n-1], &l.pts[n-2], &l.pts[0]) +
+        angle(&l.pts[0], &l.pts[n-1], &l.pts[1]);
+    for i in 2..n {
+        total = total + angle(&l.pts[i-1],&l.pts[i-2],&l.pts[i]);
+    }
+    println!(" Loop sense total is {}",total);
+    total > 0.0
+}
+    
 
 // Alternate Strategy:
 // throw every segment in a K-D tree twice. Key is vertex. Value

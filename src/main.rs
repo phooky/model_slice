@@ -1,13 +1,23 @@
 extern crate clap;
 extern crate stl_io;
+extern crate float_cmp;
 extern crate svg;
 
+use float_cmp::ApproxEq;
 use clap::{Arg, App};
 use std::fs::File;
 use stl_io::{Vertex,Triangle};
 
 mod build_face;
 use build_face::{Segment,build_loops};
+
+fn build_seg(x : &Vertex, y : &Vertex) -> Option<Segment> {
+    if x[0].approx_eq(y[0], (0.0,2)) && x[1].approx_eq(y[1], (0.0,2)) {
+        None
+    } else {
+        Some(Segment::new(x, y))
+    }
+}
 
 fn reorder(tri : &Triangle) -> (Triangle, bool) {
     // Sort vertices in order of ascending z-height.
@@ -70,14 +80,20 @@ impl SplitModel {
         } else if v1[2] < z { // case D 
             let x = intersect_plane(&v1,&v2,z);
             let y = intersect_plane(&v0,&v2,z);
-            self.add_tri( Triangle { normal : tri.normal,
-                vertices : [v0,v1,x] }, sense, false );
-            self.add_tri( Triangle { normal : tri.normal,
-                vertices : [v0,x,y] }, sense, false );
-            self.add_tri( Triangle { normal : tri.normal,
-                vertices : [x,v2,y] }, sense, true );
-            self.edge.push(Segment::new(&x,&y));
+            // Robustness check: don't create zero-size slivers
+            if let Some(segment) = build_seg(&x,&y) {
+                self.add_tri( Triangle { normal : tri.normal,
+                    vertices : [v0,v1,x] }, sense, false );
+                self.add_tri( Triangle { normal : tri.normal,
+                    vertices : [v0,x,y] }, sense, false );
+                self.add_tri( Triangle { normal : tri.normal,
+                    vertices : [x,v2,y] }, sense, true );
+                self.edge.push(segment);
+            } else {
+                self.zminus.push(original.clone());
+            }
         } else if v1[2] == z { // case E 
+            // RBST: x == v1? That would be a zero-size sliver already...
             let x = intersect_plane(&v0,&v2,z);
             self.add_tri( Triangle { normal : tri.normal,
                 vertices : [v0,v1,x] }, sense, false );
@@ -87,13 +103,20 @@ impl SplitModel {
         } else if v0[2] < z { // case F 
             let x = intersect_plane(&v0,&v1,z);
             let y = intersect_plane(&v0,&v2,z);
-            self.add_tri( Triangle { normal : tri.normal,
-                vertices : [v0,x,y] }, sense, false );
-            self.add_tri( Triangle { normal : tri.normal,
-                vertices : [y,x,v2] }, sense, true );
-            self.add_tri( Triangle { normal : tri.normal,
-                vertices : [x,v1,v2] }, sense, true );
-            self.edge.push(Segment::new(&x,&y));
+            // Robustness check: don't create zero-size slivers
+            if let Some(segment) = build_seg(&x,&y) {
+                self.add_tri( Triangle { normal : tri.normal,
+                    vertices : [v0,x,y] }, sense, false );
+                self.add_tri( Triangle { normal : tri.normal,
+                    vertices : [y,x,v2] }, sense, true );
+                self.add_tri( Triangle { normal : tri.normal,
+                    vertices : [x,v1,v2] }, sense, true );
+                println!("v0 {:?} v1 {:?} v2 {:?}",v0,v1,v2);
+                println!("X {:?} Y {:?}",x,y);
+                self.edge.push(Segment::new(&x,&y));
+            } else {
+                self.zplus.push(original.clone());
+            }
         } else if v0[2] >= z {
             self.zplus.push(original.clone());
             if v1[2] == z { // case G
@@ -149,7 +172,6 @@ fn main() {
             _ => {},
         }
     }
-    let loops = build_loops(&sm.edge);
     match matches.value_of("bottom") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
@@ -164,6 +186,7 @@ fn main() {
         },
         None => {},
     }
+    let loops = build_loops(&sm.edge);
     match matches.value_of("edge") {
         Some(path) => {
             let mut document = svg::Document::new()
