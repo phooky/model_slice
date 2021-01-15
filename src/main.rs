@@ -11,6 +11,8 @@ use stl_io::{Vertex,Triangle};
 mod build_face;
 use build_face::{Segment,build_loops};
 
+mod sweep_e2f;
+
 fn build_seg(x : &Vertex, y : &Vertex) -> Option<Segment> {
     if x[0].approx_eq(y[0], (0.0,2)) && x[1].approx_eq(y[1], (0.0,2)) {
         None
