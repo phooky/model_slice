@@ -10,7 +10,7 @@ struct Point { x : f32, y : f32 }
 
 
 #[derive(Copy,Clone,PartialEq)]
-struct Edge { a : Point, b : Point }
+struct Edge { a : Point, b : Point, slope : f32 }
 
 impl PartialOrd for Edge { 
     // We want to sort by start position followed by angle.
@@ -19,24 +19,37 @@ impl PartialOrd for Edge {
         if c1 == Some(Ordering::Equal) {
             // We don't actually need to do the arcsin here! Ordering by
             // the slope is fine.
-            self.slope().partial_cmp(&other.slope())
+            self.slope.partial_cmp(&other.slope)
         } else { c1 }
     }
 }
 
 impl Edge {
     fn new(a : &Point, b : &Point) -> Edge {
-        if a <= b { Edge { a:*a, b:*b } } else { Edge { a:*b, b:*a } }
+        let (p1, p2) = if a <= b { (*a, *b) } else { (*b, *a) };
+        Edge { a : p1, b : p2, slope : Edge::slope(p1,p2) }
     }
-    fn slope(&self) -> f32 {
-        let dy = self.b.y - self.a.y;
-        let dx = self.b.x - self.a.x;
+    fn slope(a : Point, b : Point) -> f32 {
+        let dy = b.y - a.y;
+        let dx = b.x - a.x;
         if dx == 0.0 {
             if dy > 0.0 { f32::INFINITY }
             else if dy < 0.0 { f32::NEG_INFINITY }
             else { 0.0 }
         } else {
             dy / dx
+        }
+    }
+    fn locate_pt(&self, pt : &Point) -> PtLoc {
+        if !self.slope.is_infinite() {
+            let y = self.a.y + (self.slope * (pt.x - self.a.x));
+            if pt.y > y { PtLoc::Below }
+            else if pt.y < y { PtLoc::Above }
+            else { PtLoc::On }
+        } else {
+            if pt.y < self.a.y { PtLoc::Above }
+            else if pt.y > self.b.y { PtLoc::Below }
+            else { PtLoc:: On }
         }
     }
 }
@@ -52,15 +65,14 @@ struct MonoPoly {
 }
 
 enum PtLoc {
-    Outside,
-    Upper,
-    Lower,
-    Inside,
+    Above,
+    On,
+    Below,
 }
 
 impl MonoPoly {
-    fn locate_pt(pt : &Point) -> PtLoc {
-        PtLoc::Outside
+    fn locate_pt(&self, pt : &Point) -> PtLoc {
+            PtLoc::On
     }
 }
 
