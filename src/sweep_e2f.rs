@@ -4,6 +4,7 @@
 #![allow(unused_variables)]
 
 use std::cmp::Ordering;
+use stl_io::{Triangle, Vertex};
 
 #[derive(Copy,Clone,PartialEq,PartialOrd)]
 struct Point { x : f32, y : f32 }
@@ -76,4 +77,19 @@ impl MonoPoly {
     }
 }
 
+// Rough outline:
+// Start with empty mp list
+// MP list constraints: always sorted on Y, no crossing over boundries of adjacent
+//      MPs, always valid for current sweep position
+// For each element of edge list:
+//   Scan list for location.
+//     If outside all: immediately retrieve next edge to find start of new MP.
+//     If extends an existing MP: update MP and eject a triangle.
+//     If closes an existing MP: remove MP and eject a triangle.
+//     If inside an existing MP: immediately retrieve next edge and split MP.
+//     If CROSSES an existing MP: HANDLE EDGE CASE
 
+fn sweep_edges(mut edges: Vec<Edge>, z : f32) -> Vec<Triangle> {
+    let mut tris = Vec::new();
+    tris
+}
