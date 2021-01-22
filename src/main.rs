@@ -122,8 +122,8 @@ impl SplitModel {
                     vertices : [y,x,v2] }, sense, true );
                 self.add_tri( Triangle { normal : tri.normal,
                     vertices : [x,v1,v2] }, sense, true );
-                println!("v0 {:?} v1 {:?} v2 {:?}",v0,v1,v2);
-                println!("X {:?} Y {:?}",x,y);
+                //println!("v0 {:?} v1 {:?} v2 {:?}",v0,v1,v2);
+                //println!("X {:?} Y {:?}",x,y);
                 self.edge.push(Edge::new(&x,&y));
             } else {
                 self.zplus.push(original.clone());
@@ -197,6 +197,10 @@ fn main() {
         },
         None => {},
     }
+    println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
+    println!("Slicing model at z-height {}",z);
+    let face = sweep_edges(sm.edge, z);
+    println!("Face count: {}", face.len());
     /*
     let loops = build_loops(&sm.edge);
     match matches.value_of("edge") {
@@ -223,6 +227,4 @@ fn main() {
     }
     */
 
-    println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
-    println!("Slicing model at z-height {}",z);
 }
