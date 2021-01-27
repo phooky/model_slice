@@ -5,11 +5,12 @@
 
 use std::cmp::Ordering;
 use stl_io;
+use svg;
 
-#[derive(Copy,Clone,PartialEq,PartialOrd)]
+#[derive(Copy,Clone,Debug,PartialEq,PartialOrd)]
 struct Point { x : f32, y : f32 }
 
-#[derive(Copy,Clone,PartialEq)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Edge { a : Point, b : Point, slope : f32 }
 
 impl PartialOrd for Edge { 
@@ -151,6 +152,26 @@ fn make_tri(v : &[Point;3], z : f32) -> stl_io::Triangle {
     }
 }
 
+fn dbg_tri(t : &stl_io::Triangle) -> svg::node::element::Path {
+    let scale = 2.5;
+    let mut d = svg::node::element::path::Data::new();
+    d = d.move_to( (t.vertices[0][0] * scale + 400.0,
+                    t.vertices[0][1] * scale + 400.0) );
+    for i in 0..3 {
+        let i = (i + 1) % 3;
+        d = d.line_to( (t.vertices[i][0] * scale + 400.0,
+                        t.vertices[i][1] * scale + 400.0) );
+    }
+    let path = svg::node::element::Path::new()
+        .set("fill", "none")
+        .set("stroke", "black")
+        .set("stroke-width", 0.2)
+        .set("d", d );
+    println!("adding triangle");
+    path
+}
+
+
 
 // Rough outline:
 // Start with empty mp list
@@ -168,6 +189,7 @@ pub
 fn sweep_edges(mut edges: Vec<Edge>, z : f32) -> Vec<stl_io::Triangle> {
     let mut tri_list = Vec::new();
     let mut mp_list = Vec::<MonoPoly>::new();
+    let mut svg = svg::Document::new().set("viewBox", (0,0,800,800));
     prepare_edgelist(&mut edges);
     let mut iter = edges.iter();
     while let Some(edge) = iter.next() {
@@ -188,10 +210,11 @@ fn sweep_edges(mut edges: Vec<Edge>, z : f32) -> Vec<stl_io::Triangle> {
             use EdgeDisposition::*;
             match mp.handle_edge(edge) {
                 Outside => {},
-                Crossing => { panic!("Edge crossing detected!"); },
+                Crossing => { println!("Edge crossing detected!"); },
                 Inside => { 
                 },
                 Extends(tri) => {
+                    //println!("EXTEND");
                     found = true;
                     tri_list.push(make_tri(&tri,z));
                 },
@@ -216,10 +239,15 @@ fn sweep_edges(mut edges: Vec<Edge>, z : f32) -> Vec<stl_io::Triangle> {
         match mp.handle_sweep(f32::INFINITY) {
                 SweepDisposition::Unchanged => true,
                 SweepDisposition::Discard(tri) => {
+                    println!("DISCARD");
                     tri_list.push(make_tri(&tri,z));
                     false
                 }
         }
     });
+    for tri in &tri_list {
+        svg = svg.add(dbg_tri(&tri));
+    }
+    svg::save("DEBUG.svg", &svg).unwrap();
     tri_list
 }
