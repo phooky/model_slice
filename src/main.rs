@@ -62,7 +62,7 @@ fn correct_sense(tri : &mut Triangle, sense : bool) {
 struct SplitModel {
     zplus : Vec<Triangle>,
     zminus : Vec<Triangle>,
-    edge : Vec<Edge>,
+    edge : Vec<Segment>,
 }
 
 impl SplitModel {
@@ -86,13 +86,13 @@ impl SplitModel {
         if v2[2] <= z { // case A/B/C
             self.zminus.push(original.clone());
             if v1[2] == z { // case C
-                self.edge.push(Edge::new(&v1,&v2));
+                self.edge.push(Segment::new(&v1,&v2));
             }
         } else if v1[2] < z { // case D 
             let x = intersect_plane(&v1,&v2,z);
             let y = intersect_plane(&v0,&v2,z);
             // Robustness check: don't create zero-size slivers
-            if let Some(segment) = build_edge(&x,&y) {
+            if let Some(segment) = build_seg(&x,&y) {
                 self.add_tri( Triangle { normal : tri.normal,
                     vertices : [v0,v1,x] }, sense, false );
                 self.add_tri( Triangle { normal : tri.normal,
@@ -110,12 +110,12 @@ impl SplitModel {
                 vertices : [v0,v1,x] }, sense, false );
             self.add_tri( Triangle { normal : tri.normal,
                 vertices : [v1,v2,x] }, sense, true );
-            self.edge.push(Edge::new(&x,&v1));
+            self.edge.push(Segment::new(&x,&v1));
         } else if v0[2] < z { // case F 
             let x = intersect_plane(&v0,&v1,z);
             let y = intersect_plane(&v0,&v2,z);
             // Robustness check: don't create zero-size slivers
-            if let Some(segment) = build_edge(&x,&y) {
+            if let Some(segment) = build_seg(&x,&y) {
                 self.add_tri( Triangle { normal : tri.normal,
                     vertices : [v0,x,y] }, sense, false );
                 self.add_tri( Triangle { normal : tri.normal,
@@ -124,14 +124,14 @@ impl SplitModel {
                     vertices : [x,v1,v2] }, sense, true );
                 //println!("v0 {:?} v1 {:?} v2 {:?}",v0,v1,v2);
                 //println!("X {:?} Y {:?}",x,y);
-                self.edge.push(Edge::new(&x,&y));
+                self.edge.push(Segment::new(&x,&y));
             } else {
                 self.zplus.push(original.clone());
             }
         } else if v0[2] >= z {
             self.zplus.push(original.clone());
             if v1[2] == z { // case G
-                self.edge.push(Edge::new(&v0,&v1));
+                self.edge.push(Segment::new(&v0,&v1));
             }
         } else { println!("CASE X"); }
     }
@@ -199,24 +199,27 @@ fn main() {
     }
     println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
     println!("Slicing model at z-height {}",z);
-    let face = sweep_edges(sm.edge, z);
-    println!("Face count: {}", face.len());
-    /*
+    //let face = sweep_edges(sm.edge, z);
     let loops = build_loops(&sm.edge);
+    let scale = 5.0;
+    println!("Loop count: {}", loops.len());
     match matches.value_of("edge") {
         Some(path) => {
             let mut document = svg::Document::new()
-                .set("viewBox", (0, 0, 600, 600));
+                .set("viewBox", (0, 0, 800, 800));
             for l in loops {
                 let mut data = svg::node::element::path::Data::new();
-                data = data.move_to((l.pts[0][0]+150.0,l.pts[0][1]+150.0));
+                data = data.move_to((l.pts[0][0]*scale+400.0,l.pts[0][1]*scale+400.0));
                 for pt in l.pts.iter().skip(1) {
-                    data = data.line_to((pt[0]+150.0,pt[1]+150.0));
+                    data = data.line_to((pt[0]*scale+400.0,pt[1]*scale+400.0));
+                }
+                if l.closed {
+                    data = data.line_to((l.pts[0][0]*scale+400.0,l.pts[0][1]*scale+400.0));
                 }
                 let path = svg::node::element::Path::new()
                     .set("fill", "none")
                     .set("stroke", "black")
-                    .set("stroke-width", 3)
+                    .set("stroke-width", 0.5)
                     .set("d", data);
 
                 document = document.add(path);
@@ -225,6 +228,5 @@ fn main() {
         },
         None => {},
     }
-    */
 
 }

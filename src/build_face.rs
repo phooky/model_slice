@@ -55,11 +55,14 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
                         panic!("X-point!")},
                 }
             }
-            if np.is_none() { break; }
+            if np.is_none() { 
+                break; 
+            }
             point = *np.unwrap();
+            tree.remove(&point);
         }
         loops.push(l);
-        break;
+        //break;
     }
     loops
 }
