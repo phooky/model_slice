@@ -42,7 +42,7 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
             let pos = point.position();
             l.pts.push(*pos);
             let nextpos = segs[idx].other(pos);
-            println!("From {:?} to {:?} via {}",pos,nextpos,idx);
+            //println!("From {:?} to {:?} via {}",pos,nextpos,idx);
             tree.remove(&PointWithIndex::new(idx,nextpos));
             let mut np = None;
             for candidate in tree.locate_all_at_point(&nextpos) { 
@@ -56,10 +56,18 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
                 }
             }
             if np.is_none() { 
+                l.pts.push(nextpos);
                 break; 
             }
             point = *np.unwrap();
             tree.remove(&point);
+        }
+        let first = l.pts[0];
+        let last = l.pts[l.pts.len()-1];
+        println!("Loop from {:?} to {:?}",first,last);
+        if first[0] == last[0] && first[1] == last[1] {
+            println!("CLOSED");
+            l.closed = true;
         }
         loops.push(l);
         //break;
@@ -83,18 +91,46 @@ pub fn loop_sense(l : &Loop) -> bool {
     println!(" Loop sense total is {}",total);
     total > 0.0
 }
-    
 
-// Alternate Strategy:
-// throw every segment in a K-D tree twice. Key is vertex. Value
-// is a list of vertices or chains. (Should everything start as a
-// 1-length chain? It seems clever, but may involve more data 
-// reshuffling than we like.)
-//
-// If we start out trying to build the chains as we insert, we may
-// run into issues with intersecting chains, and a lot of chain
-// merging. Intersecting chains we can deal with by keeping pointers
-// to chains (although position annotations would suck), but then we've
-// got a separate split chain issue, etc. Doing all insertions first and
-// keeping track of X points separately may do the trick.
+use lyon::path::Path;
+use lyon::path::builder::*;
+use lyon::tessellation::*;
+
+fn lpoint(p : &[f32;2]) -> lyon::math::Point {
+    use lyon::math::point;
+    point( p[0], p[1] )
+}
+
+struct WithZ(f32);
+
+impl FillVertexConstructor<Vertex> for WithZ {
+    fn new_vertex(&mut self, vertex: FillVertex) -> Vertex {
+        let pos = vertex.position().to_array();
+        Vertex::new([pos[0],pos[1],self.0])
+    }
+}
+
+pub fn build_faces(loops : &Vec<Loop>) {
+    println!("*** BFACES ***");
+    let mut builder = Path::builder();
+    for l in loops {
+        builder.begin(lpoint(&l.pts[0]));
+        for p in l.pts.iter().skip(1) {
+            builder.line_to(lpoint(p));
+        }
+        builder.end(l.closed);
+    }
+    let path = builder.build();
+    let mut tess = FillTessellator::new();
+    let mut buffers: VertexBuffers<Vertex, u16> = VertexBuffers::new();
+    //let mut vert_build = geometry_builder::BuffersBuilder::new(&mut buffers,WithZ(0.0));
+    let result = tess.tessellate_path(
+        &path,
+        &FillOptions::default(),
+        &mut geometry_builder::BuffersBuilder::new(&mut buffers,WithZ(0.0))
+    );
+    assert!(result.is_ok());
+    let ilen = buffers.indices.len();
+    println!("Triangle count: {} {}",ilen, ilen/3);
+}
 

@@ -9,7 +9,7 @@ use std::fs::File;
 use stl_io::{Vertex,Triangle};
 
 mod build_face;
-use build_face::{Segment,build_loops};
+use build_face::{Segment,build_loops,build_faces};
 
 mod sweep_e2f;
 use sweep_e2f::{Edge,sweep_edges};
@@ -201,6 +201,7 @@ fn main() {
     println!("Slicing model at z-height {}",z);
     //let face = sweep_edges(sm.edge, z);
     let loops = build_loops(&sm.edge);
+    build_faces(&loops);
     let scale = 5.0;
     println!("Loop count: {}", loops.len());
     match matches.value_of("edge") {
