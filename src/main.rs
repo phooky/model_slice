@@ -183,9 +183,14 @@ fn main() {
             _ => {},
         }
     }
+    println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
+    println!("Slicing model at z-height {}",z);
+    let loops = build_loops(&sm.edge);
+    let cut_face = build_faces(&loops,z);
     match matches.value_of("bottom") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
+            sm.zminus.append(&mut cut_face.clone());
             stl_io::write_stl(&mut f,sm.zminus.iter()).unwrap();
         },
         None => {},
@@ -193,15 +198,11 @@ fn main() {
     match matches.value_of("top") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
+            sm.zplus.append(&mut cut_face.clone());
             stl_io::write_stl(&mut f,sm.zplus.iter()).unwrap();
         },
         None => {},
     }
-    println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
-    println!("Slicing model at z-height {}",z);
-    //let face = sweep_edges(sm.edge, z);
-    let loops = build_loops(&sm.edge);
-    build_faces(&loops);
     let scale = 5.0;
     println!("Loop count: {}", loops.len());
     match matches.value_of("edge") {

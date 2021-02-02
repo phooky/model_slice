@@ -1,4 +1,4 @@
-use stl_io::Vertex;
+use stl_io::{Vertex,Triangle};
 use rstar::RTree;
 use rstar::primitives::PointWithData;
 
@@ -110,7 +110,7 @@ impl FillVertexConstructor<Vertex> for WithZ {
     }
 }
 
-pub fn build_faces(loops : &Vec<Loop>) {
+pub fn build_faces(loops : &Vec<Loop>, z : f32) -> Vec<Triangle> {
     println!("*** BFACES ***");
     let mut builder = Path::builder();
     for l in loops {
@@ -123,14 +123,22 @@ pub fn build_faces(loops : &Vec<Loop>) {
     let path = builder.build();
     let mut tess = FillTessellator::new();
     let mut buffers: VertexBuffers<Vertex, u16> = VertexBuffers::new();
-    //let mut vert_build = geometry_builder::BuffersBuilder::new(&mut buffers,WithZ(0.0));
     let result = tess.tessellate_path(
         &path,
         &FillOptions::default(),
-        &mut geometry_builder::BuffersBuilder::new(&mut buffers,WithZ(0.0))
+        &mut geometry_builder::BuffersBuilder::new(&mut buffers,WithZ(z))
     );
     assert!(result.is_ok());
     let ilen = buffers.indices.len();
     println!("Triangle count: {} {}",ilen, ilen/3);
+    let mut rv = Vec::new();
+    let normal = stl_io::Vector::new([0.0,0.0,1.0]);
+    for chunk in buffers.indices.chunks_exact(3) {
+        let vs : Vec<Vertex> = chunk.iter().map(|idx| buffers.vertices[*idx as usize]).collect();
+        rv.push( Triangle { vertices : [ vs[0], vs[1], vs[2] ],
+            normal : normal } );
+    }
+    println!("{} triangles",rv.len());
+    rv
 }
 
