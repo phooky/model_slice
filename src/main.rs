@@ -122,8 +122,6 @@ impl SplitModel {
                     vertices : [y,x,v2] }, sense, true );
                 self.add_tri( Triangle { normal : tri.normal,
                     vertices : [x,v1,v2] }, sense, true );
-                //println!("v0 {:?} v1 {:?} v2 {:?}",v0,v1,v2);
-                //println!("X {:?} Y {:?}",x,y);
                 self.edge.push(Segment::new(&x,&y));
             } else {
                 self.zplus.push(original.clone());
@@ -186,20 +184,27 @@ fn main() {
     println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
     println!("Slicing model at z-height {}",z);
     let loops = build_loops(&sm.edge);
-    let cut_face = build_faces(&loops,z);
-    match matches.value_of("bottom") {
-        Some(path) => {
-            let mut f = File::create(path).unwrap();
-            sm.zminus.append(&mut cut_face.clone());
-            stl_io::write_stl(&mut f,sm.zminus.iter()).unwrap();
-        },
-        None => {},
-    }
+    let mut cut_face = build_faces(&loops,z);
     match matches.value_of("top") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
             sm.zplus.append(&mut cut_face.clone());
             stl_io::write_stl(&mut f,sm.zplus.iter()).unwrap();
+        },
+        None => {},
+    }
+    match matches.value_of("bottom") {
+        Some(path) => {
+            let mut f = File::create(path).unwrap();
+            // Invert the normals on the cut face
+            let mut cf = cut_face.clone();
+            let normal = stl_io::Vector::new([0.0,0.0,-1.0]);
+            for tri in cf.iter_mut() {
+                correct_sense(tri, true);
+                tri.normal = normal;
+            }
+            sm.zminus.append(&mut cf);
+            stl_io::write_stl(&mut f,sm.zminus.iter()).unwrap();
         },
         None => {},
     }
