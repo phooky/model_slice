@@ -11,11 +11,11 @@ use stl_io::{Vertex,Triangle};
 mod build_face;
 use build_face::{Segment,build_loops,build_faces};
 
-//! "Sense", as used below, is whether the order of the vertices in a
-//! triangle are clockwise or counterclockwise (facing the triangle from
-//! the side of the normal vector). A triangle with the wrong sense
-//! is "backwards" with respect to the normal and may be culled by many
-//! STL viewers.
+// "Sense", as used below, is whether the order of the vertices in a
+// triangle are clockwise or counterclockwise (facing the triangle from
+// the side of the normal vector). A triangle with the wrong sense
+// is "backwards" with respect to the normal and may be culled by many
+// STL viewers.
 
 
 /// Returns a segment linking the two vertices if they are distinct,
@@ -91,10 +91,10 @@ impl SplitModel {
         let (tri, sense) = reorder(&original);
         let [v0, v1, v2] = tri.vertices;
         if v2[2] <= z { 
-            /// Triangle is entirely in the zminus model
+            // Triangle is entirely in the zminus model
             self.zminus.push(original.clone());
             if v1[2] == z {
-                /// If an edge lies on the plane, add it to the edge list.
+                // If an edge lies on the plane, add it to the edge list.
                 self.edge.push(Segment::new(&v1,&v2));
             }
         } else if v1[2] < z { // case D 
@@ -136,10 +136,10 @@ impl SplitModel {
                 self.zplus.push(original.clone());
             }
         } else if v0[2] >= z {
-            /// Triangle is entirely in the zplus model
+            // Triangle is entirely in the zplus model
             self.zplus.push(original.clone());
             if v1[2] == z { 
-                /// If an edge lies on the plane, add it to the edge list.
+                // If an edge lies on the plane, add it to the edge list.
                 self.edge.push(Segment::new(&v0,&v1));
             }
         } else { println!("CASE X"); }
