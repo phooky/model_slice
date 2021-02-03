@@ -11,6 +11,15 @@ use stl_io::{Vertex,Triangle};
 mod build_face;
 use build_face::{Segment,build_loops,build_faces};
 
+//! "Sense", as used below, is whether the order of the vertices in a
+//! triangle are clockwise or counterclockwise (facing the triangle from
+//! the side of the normal vector). A triangle with the wrong sense
+//! is "backwards" with respect to the normal and may be culled by many
+//! STL viewers.
+
+
+/// Returns a segment linking the two vertices if they are distinct,
+/// or `None` if they are approximately equal.
 fn build_seg(x : &Vertex, y : &Vertex) -> Option<Segment> {
     if x[0].approx_eq(y[0], (0.0,2)) && x[1].approx_eq(y[1], (0.0,2)) {
         None
@@ -19,10 +28,10 @@ fn build_seg(x : &Vertex, y : &Vertex) -> Option<Segment> {
     }
 }
 
+/// Reorders the vertices in a triangle along the ascending z axis.
+/// Returns a tuple of the modified triangle and a boolean indicating
+/// if the sense of the triangle has been reversed by the reordering.
 fn reorder(tri : &Triangle) -> (Triangle, bool) {
-    // Sort vertices in order of ascending z-height.
-    // The 'sense' boolean is true if the cycle of the
-    // vertices has been reversed.
     let mut rv = tri.clone();
     let mut sense = false;
     let mut cond_swap = |a : usize, b : usize| {
@@ -39,6 +48,8 @@ fn reorder(tri : &Triangle) -> (Triangle, bool) {
     (rv, sense)
 }
 
+/// Reverses the order of vertices in a triangle to return them to
+/// their original sense.
 fn correct_sense(tri : &mut Triangle, sense : bool) {
     // Correct the sense of the triangle
     if sense {
@@ -48,6 +59,8 @@ fn correct_sense(tri : &mut Triangle, sense : bool) {
     }
 }
 
+/// Structure that maintains the top, bottom, and edge list of a model
+/// being split.
 struct SplitModel {
     zplus : Vec<Triangle>,
     zminus : Vec<Triangle>,
@@ -55,10 +68,12 @@ struct SplitModel {
 }
 
 impl SplitModel {
+    /// Create an empty SplitModel.
     fn new() -> SplitModel {
         SplitModel{ zplus : Vec::new(), zminus : Vec::new(), edge : Vec::new() }
     }
 
+    /// Add a triangle to the top or bottom model, correcting the sense.
     fn add_tri(&mut self, mut t2 : Triangle, sense : bool, zplus : bool) {
         correct_sense(&mut t2, sense);
         if zplus { 
@@ -68,13 +83,18 @@ impl SplitModel {
         }
     }
 
+    /// Add a triangle to the model. If the triangle spans the splitting plane,
+    /// cut it into two or more triangles and add them to the appropriate split
+    /// model, as well as adding the cutting edge to the edge list.
     fn split_tri(&mut self, tri : &Triangle, z : f32) {
         let original = tri;
         let (tri, sense) = reorder(&original);
         let [v0, v1, v2] = tri.vertices;
-        if v2[2] <= z { // case A/B/C
+        if v2[2] <= z { 
+            /// Triangle is entirely in the zminus model
             self.zminus.push(original.clone());
-            if v1[2] == z { // case C
+            if v1[2] == z {
+                /// If an edge lies on the plane, add it to the edge list.
                 self.edge.push(Segment::new(&v1,&v2));
             }
         } else if v1[2] < z { // case D 
@@ -116,8 +136,10 @@ impl SplitModel {
                 self.zplus.push(original.clone());
             }
         } else if v0[2] >= z {
+            /// Triangle is entirely in the zplus model
             self.zplus.push(original.clone());
-            if v1[2] == z { // case G
+            if v1[2] == z { 
+                /// If an edge lies on the plane, add it to the edge list.
                 self.edge.push(Segment::new(&v0,&v1));
             }
         } else { println!("CASE X"); }
