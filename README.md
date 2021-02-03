@@ -5,6 +5,7 @@ A command-line tool for slicing STL models into two parts along the Z axis. Uses
 1. Install the rust toolchain, if you don't already have it.
 2. `cargo build --release`
 
+## Usage
 ```
 Simple solid model slicer 
 Cuts a model along a plane orthogonal to the z-axis
