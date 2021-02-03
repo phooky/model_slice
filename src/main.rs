@@ -11,17 +11,6 @@ use stl_io::{Vertex,Triangle};
 mod build_face;
 use build_face::{Segment,build_loops,build_faces};
 
-mod sweep_e2f;
-use sweep_e2f::{Edge,sweep_edges};
-
-fn build_edge(a : &Vertex, b : &Vertex) -> Option<Edge> {
-    if a[0].approx_eq(b[0], (0.0,2)) && a[1].approx_eq(b[1], (0.0,2)) {
-        None
-    } else {
-        Some(Edge::new(&a, &b))
-    }
-}
-
 fn build_seg(x : &Vertex, y : &Vertex) -> Option<Segment> {
     if x[0].approx_eq(y[0], (0.0,2)) && x[1].approx_eq(y[1], (0.0,2)) {
         None
@@ -122,7 +111,7 @@ impl SplitModel {
                     vertices : [y,x,v2] }, sense, true );
                 self.add_tri( Triangle { normal : tri.normal,
                     vertices : [x,v1,v2] }, sense, true );
-                self.edge.push(Segment::new(&x,&y));
+                self.edge.push(segment);
             } else {
                 self.zplus.push(original.clone());
             }
@@ -143,6 +132,7 @@ fn intersect_plane(a : &Vertex, b : &Vertex, z : f32) -> Vertex {
 }
 
 fn main() {
+    // Argument parsing
     let clap = App::new("Simple solid model slicer")
         .about("Cuts a model along a plane orthogonal to the z-axis")
         .arg(Arg::with_name("z-height")
@@ -183,8 +173,9 @@ fn main() {
     }
     println!("Triangle count {} above, {} below, {} segments",sm.zplus.len(),sm.zminus.len(), sm.edge.len());
     println!("Slicing model at z-height {}",z);
+
     let loops = build_loops(&sm.edge);
-    let mut cut_face = build_faces(&loops,z);
+    let cut_face = build_faces(&loops,z);
     match matches.value_of("top") {
         Some(path) => {
             let mut f = File::create(path).unwrap();
@@ -193,6 +184,7 @@ fn main() {
         },
         None => {},
     }
+
     match matches.value_of("bottom") {
         Some(path) => {
             let mut f = File::create(path).unwrap();

@@ -48,7 +48,7 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
             for candidate in tree.locate_all_at_point(&nextpos) { 
                 np = match np {
                     None => Some(candidate),
-                    Some(x) => {
+                    Some(_) => {
                         for (idx, seg) in segs.iter().enumerate() {
                             println!("{} {:?} {:?}",idx,seg.a,seg.b);
                         }
@@ -75,25 +75,7 @@ pub fn build_loops(segs : &Vec<Segment>) -> Vec<Loop> {
     loops
 }
 
-fn angle(point : &[f32;2], prev : &[f32;2], next : &[f32;2]) -> f32 {
-    let next = [next[0]-point[0],next[1]-point[1]];
-    let prev = [prev[0]-point[0],prev[1]-point[1]];
-    next[1].atan2(next[0]) - prev[1].atan2(prev[0])
-}
-
-pub fn loop_sense(l : &Loop) -> bool {
-    let n = l.pts.len();
-    let mut total = angle(&l.pts[n-1], &l.pts[n-2], &l.pts[0]) +
-        angle(&l.pts[0], &l.pts[n-1], &l.pts[1]);
-    for i in 2..n {
-        total = total + angle(&l.pts[i-1],&l.pts[i-2],&l.pts[i]);
-    }
-    println!(" Loop sense total is {}",total);
-    total > 0.0
-}
-
 use lyon::path::Path;
-use lyon::path::builder::*;
 use lyon::tessellation::*;
 
 fn lpoint(p : &[f32;2]) -> lyon::math::Point {
